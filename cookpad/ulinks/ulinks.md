@@ -8,7 +8,7 @@
 **To create a universal link:**
 
 - Configure your app by adding an Associated Domain entitlement, plus the code to handle links in the app/scene delegate.
-- Configure your website by adding a associated domain file.
+- Configure your website by adding an associated domain file.
 
 Because the entitlement mentions your domain, and the file on your domain mentions your app, this creates a secure two-way association, allowing your app to perform special tasks on behalf of your website.
 
@@ -38,6 +38,8 @@ An associated domain is required to enable the following features:
 - Universal links
 
 ## Cookpad 
+
+### AppDelegate
 
 The app delegate receives a universal link when the user
 
@@ -75,6 +77,28 @@ The **AppContext** is an object holding 30+ dependencies of the application. Eac
 A **coordinator** is an object that manages navigation and instantiation of controllers. In Cookpad this coordinator happens to be a view controller, which loads other view controllers nesting them full screen. Each coordinator can be thought as a small application, where controllers don’t directly know each other.
 
 Let’s see next how the coordinator handles a deep link URL.
+
+### Coordinator
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
