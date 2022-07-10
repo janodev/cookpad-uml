@@ -37,20 +37,18 @@ An associated domain is required to enable the following features:
 - Shared web credentials: sign in to apps using credentials saved in Safari with iCloud Keychain.
 - Universal links
 
-## Cookpad 
-
-### AppDelegate
+### How deep links arrive
 
 The app delegate receives a universal link when the user
 
 - types a URL in Safari
 - opens Safari to invoke a Handoff passed from another device
 - talks to Siri to trigger a SiriKit intent
- 
+
 <table>
 <tr>
   <td>
-    <img width="600" src="appdelegate-1.png"/>
+    <img width="600" src="appdelegate.png"/>
   </td>
   <td>
     <p>
@@ -66,40 +64,60 @@ The app delegate receives a universal link when the user
 </tr>
 </table>
 
-Those two methods extract the URL and pass it to the startFlow method, which logs to Firebase and passes the URL to the coordinator.
+## Cookpad 
 
-<img width="600" src="appdelegate-2.png"/>
+<img width="800" src="overview.png"/>
 
-Note that the AppDelegate keeps track of its own state, and this state holds the dependencies (AppContext) and the coordinator.
+Objects involved
 
-The **AppContext** is an object holding 30+ dependencies of the application. Each component that needs to be injected defines its dependencies using a composition of protocols. So even when they receive the full object, they only have access to what they need.
+- <details><summary>**AppContext**</summary> Each component that needs to be injected defines its dependencies using composition of protocols. So even when they receive the full object, they only have access to what they need.</details>
 
-A **coordinator** is an object that manages navigation and instantiation of controllers. In Cookpad this coordinator happens to be a view controller, which loads other view controllers nesting them full screen. Each coordinator can be thought as a small application, where controllers don’t directly know each other.
+- <details><summary>**AppResponderURLOptions**</summary>
+    <ul>
+      <li>Native: opening a native screen</li>
+      <li>Safari: ask Safari to open the link</li>
+      <li>Open URL: ask iOS to open the link</li>
+      <li>Universal links only: native screen only, don’t fallback to other ways.</li>
+    </ul>
+    <img width="300" src="AppResponderURLOptions.png"/>
+    
+    The `default` property is an array of native, safari, and open url. The first option available wins.
+    
+    Why is `AppResponderURLOptions` a struct? 
+    <ul>
+      <li>Using a struct allows adding more cases without editing the code.</li>
+      <li>Using a enum
+        <ul>
+          <li>requires minimal effort to add another case if the source is private</li>
+          <li>causes compiler errors indicating where to handle new cases</li>
+          <li>lets you define new cases without causing compiler errors by using `@unknown default`</li>
+        </ul>
+      </li>
+</details>
 
-Let’s see next how the coordinator handles a deep link URL.
+- <details><summary>**State**</summary> This prevents trying to handle a link while the application is still launching. When the app is launched, the state holds the app dependencies (AppContext) and root coordinator (TabCoordinator).</details>
 
-### Coordinator
+- <details><summary>**TabCoordinator**</summary>
+    - A **coordinator** is an object that manages navigation and instantiation of controllers. Each coordinator can be thought as a small application, where controllers don’t directly know each other. In Cookpad coordinators are view controllers, which load other view controllers nesting them full screen.</details>
 
+#### ① AppDelegate 
 
+- Ignore the URL if the application is launching
+- Call Firebase to log incoming URLs and user activities
+- Call the Coordinator 
+    - to process a possible OAuth URL
+    - to start a flow based on the URL
 
+#### ② Coordinator
 
+Ask the AppLinkHandler to map the URL to a UniversalLink
 
+- If success, ask the interactor to process the link
+- If failure, try to open the URL as instructed by AppResponderURLOptions
 
+#### Logging
 
+<img width="800" src="logging.png"/>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+In the figure “UTM” stands for [Urchin Tracking Module (UTM)](https://en.wikipedia.org/wiki/UTM_parameters) parameters. They are URL parameters that indicate sources of traffic to an application.
 
