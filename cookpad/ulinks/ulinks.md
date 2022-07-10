@@ -70,20 +70,21 @@ The app delegate receives a universal link when the user
 
 Objects involved
 
-- <details><summary>**AppContext**</summary> Each component that needs to be injected defines its dependencies using composition of protocols. So even when they receive the full object, they only have access to what they need.</details>
+- <details><summary>**AppContext**</summary> Holds all the dependencies of the application. Each component that needs to be injected defines its dependencies using composition of protocols. So even when they receive the full object, they only have access to what they need.</details>
 
 - <details><summary>**AppResponderURLOptions**</summary>
+    Represents the ways to open a URL.
     <ul>
       <li>Native: opening a native screen</li>
       <li>Safari: ask Safari to open the link</li>
       <li>Open URL: ask iOS to open the link</li>
       <li>Universal links only: native screen only, don’t fallback to other ways.</li>
     </ul>
-    <img width="300" src="AppResponderURLOptions.png"/>
+    <img width="200" src="AppResponderURLOptions.png"/>
     
-    The `default` property is an array of native, safari, and open url. The first option available wins.
+    The `default` property is a set of native, safari, and open url. The first option available wins.
     
-    Why is `AppResponderURLOptions` a struct? 
+    Why isn’t `AppResponderURLOptions` a enum? 
     <ul>
       <li>Using a struct allows adding more cases without editing the code.</li>
       <li>Using a enum
@@ -95,12 +96,14 @@ Objects involved
       </li>
 </details>
 
-- <details><summary>**State**</summary> This prevents trying to handle a link while the application is still launching. When the app is launched, the state holds the app dependencies (AppContext) and root coordinator (TabCoordinator).</details>
+- <details><summary>**State**</summary> Represents the state of the app launching/launched. This prevents trying to handle a link while the application is still launching. When the app is launched, the state holds the app dependencies (AppContext) and root coordinator (TabCoordinator).</details>
 
 - <details><summary>**TabCoordinator**</summary>
     - A **coordinator** is an object that manages navigation and instantiation of controllers. Each coordinator can be thought as a small application, where controllers don’t directly know each other. In Cookpad coordinators are view controllers, which load other view controllers nesting them full screen.</details>
 
-#### ① AppDelegate 
+### Pseudocode
+
+① **AppDelegate**
 
 - Ignore the URL if the application is launching
 - Call Firebase to log incoming URLs and user activities
@@ -108,12 +111,27 @@ Objects involved
     - to process a possible OAuth URL
     - to start a flow based on the URL
 
-#### ② Coordinator
+② **Coordinator**
 
-Ask the AppLinkHandler to map the URL to a UniversalLink
+- Ask the AppLinkHandler to map the URL to a UniversalLink
+    - If success, ask the interactor to process the link
+    - If failure, try to open the URL as instructed by AppResponderURLOptions
 
-- If success, ask the interactor to process the link
-- If failure, try to open the URL as instructed by AppResponderURLOptions
+One exception: if the current presented controller is not interruptible, the coordinator doesn’t try to open a native controller. Being interruptible means being marked `ViewCoordinatorInteruptable`.
+
+③ **TabInteractor**
+
+When processing a universal link the TabInteractor checks if the link requires authentication
+
+- If it does, the interactor asks the tab coordinator to run the login flow and try processing the link again
+- If it doesn’t, tell the PendingExternalActionHandler to process the link
+
+<img width="800" src="interactor.png"/>
+
+④ **PendingExternalActionHandler**
+
+- If the app is active, call interactor.performLink(UniversalLink)
+- If the app is not active, store the link as `lastAction`. When the application becomes active, the `lastAction` is called from the TabInteractor.viewDidAppear and from didBecomeActiveNotification.
 
 #### Logging
 
